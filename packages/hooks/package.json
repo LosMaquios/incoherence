@@ -1,0 +1,13 @@
+{
+  "name": "@incoherence/hooks",
+  "version": "0.1.0",
+  "description": "Hooks functionality",
+  "main": "dist/hooks.js",
+  "module": "dist/hooks.esm.js",
+  "types": "dist/hooks.d.ts",
+  "author": "Camilo Rodríguez <aeromotiondesign@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@incoherence/core": "*"
+  }
+}

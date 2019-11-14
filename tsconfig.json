@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": "packages/",
+    "target": "esnext",
+    "module": "esnext",
+    "rootDir": ".",
+    "outDir": "dist",
+    "sourceMap": false,
+    "types": ["node"],
+    "paths": {
+      "@incoherence/core": ["core/src"],
+      "@incoherence/hooks": ["hooks/src"]
+    }
+  }
+}

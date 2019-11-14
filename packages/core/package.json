@@ -1,0 +1,13 @@
+{
+  "name": "@incoherence/core",
+  "version": "0.1.0",
+  "description": "Core functionality",
+  "main": "dist/core.js",
+  "module": "dist/core.esm.js",
+  "types": "dist/core.d.ts",
+  "author": "Camilo Rodríguez <aeromotiondesign@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "escape-string-regexp": "^2.0.0"
+  }
+}
