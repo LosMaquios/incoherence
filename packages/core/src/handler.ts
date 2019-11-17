@@ -12,6 +12,18 @@ import {
 } from './matcher'
 import { setContext, getContext, setError } from './context'
 
+const methods: RouteMethod[] = [
+  'GET',
+  'POST',
+  'HEAD',
+  'OPTIONS',
+  'PUT',
+  'PATCH',
+  'DELETE',
+  'CONNECT',
+  'TRACE'
+]
+
 const getSimpleResponse = (status: RouteStatusCode, message: string): RouteComponentResponseObject => ({
   status,
   body: `[${status}] ${message}`
@@ -34,16 +46,23 @@ export const put = wrapMethodRouteMatcher('PUT')
 export const patch = wrapMethodRouteMatcher('PATCH')
 export const head = wrapMethodRouteMatcher('HEAD')
 export const options = wrapMethodRouteMatcher('OPTIONS')
+export const trace = wrapMethodRouteMatcher('TRACE')
+export const connect = wrapMethodRouteMatcher('CONNECT')
 
 /**
  * Alias of `delete` to avoid keyword collision
  */
 export const del = wrapMethodRouteMatcher('DELETE')
 
+export const all = (path: string, component: RouteComponent) => methods
+  .map(method => createRouteMatcher(method, path, component))
+
 export function makeHandler (
   routes: RouteMatcher[],
   options: HandlerOptions
 ) {
+  routes = routes.flat(Infinity)
+
   const routesMap = getRoutesMap(routes)
 
   options = Object.assign({
@@ -129,17 +148,7 @@ export function makeHandler (
 }
 
 function getRoutesMap (routes: RouteMatcher[]) {
-  const map = getMapFromMethods([
-    'GET',
-    'POST',
-    'HEAD',
-    'OPTIONS',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'CONNECT',
-    'TRACE'
-  ])
+  const map = getMapFromMethods(methods)
 
   for (const route of routes) {
     map
