@@ -1,3 +1,9 @@
 export * from './handler'
 
-export { getContext } from './context'
+export {
+  getContext,
+  getError,
+  ContextRequest,
+  ContextResponse,
+  RouteComponentContext
+} from './context'

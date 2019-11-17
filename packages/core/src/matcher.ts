@@ -1,7 +1,5 @@
 import escapeStringRegexp = require('escape-string-regexp')
 
-import { setContext } from './context'
-
 export type RouteMethod = 'GET' | 'POST' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE'
 
 // Taken from: https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
@@ -76,9 +74,6 @@ function getComponentInvoker (
 ) {
   return async function componentInvoker () {
     const componentResponse = await component()
-
-    // Clear context
-    setContext(null)
 
     // Clear params
     params.clear()

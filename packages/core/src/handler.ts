@@ -1,4 +1,3 @@
-import { ServerResponse, IncomingMessage } from 'http'
 import { URL } from 'url'
 
 import {
@@ -10,9 +9,15 @@ import {
   RouteStatusCode,
   RouteComponentResponse
 } from './matcher'
-import { setContext, getContext, setError } from './context'
+import {
+  setContext,
+  getContext,
+  setError,
+  ContextRequest,
+  ContextResponse
+} from './context'
 
-const methods: RouteMethod[] = [
+const supportedMethods: RouteMethod[] = [
   'GET',
   'POST',
   'HEAD',
@@ -20,8 +25,10 @@ const methods: RouteMethod[] = [
   'PUT',
   'PATCH',
   'DELETE',
-  'CONNECT',
-  'TRACE'
+  /**
+   * 'CONNECT',
+   * 'TRACE'
+   */
 ]
 
 const getSimpleResponse = (status: RouteStatusCode, message: string): RouteComponentResponseObject => ({
@@ -29,12 +36,12 @@ const getSimpleResponse = (status: RouteStatusCode, message: string): RouteCompo
   body: `[${status}] ${message}`
 })
 
-const onUnknownDefaultHandler: RouteComponent = async () => getSimpleResponse(404, 'Not found')
-const onErrorDefaultHandler: RouteComponent = async () => getSimpleResponse(500, 'Internal server error')
+const onUnknownDefaultHandler: RouteComponent = async () => getSimpleResponse(404, 'Not Found')
+const onErrorDefaultHandler: RouteComponent = async () => getSimpleResponse(500, 'Internal Server Error')
 
 export interface HandlerOptions {
-  onUnknown: RouteComponent
-  onError: RouteComponent
+  onUnknown?: RouteComponent
+  onError?: RouteComponent
 }
 
 const wrapMethodRouteMatcher = (method: RouteMethod) =>
@@ -45,21 +52,26 @@ export const post = wrapMethodRouteMatcher('POST')
 export const put = wrapMethodRouteMatcher('PUT')
 export const patch = wrapMethodRouteMatcher('PATCH')
 export const head = wrapMethodRouteMatcher('HEAD')
-export const options = wrapMethodRouteMatcher('OPTIONS')
-export const trace = wrapMethodRouteMatcher('TRACE')
-export const connect = wrapMethodRouteMatcher('CONNECT')
+export const opts = wrapMethodRouteMatcher('OPTIONS')
+
+/**
+ * TODO: I need to investigate more about methods below
+ *
+ * export const trace = wrapMethodRouteMatcher('TRACE')
+ * export const connect = wrapMethodRouteMatcher('CONNECT')
+ */
 
 /**
  * Alias of `delete` to avoid keyword collision
  */
 export const del = wrapMethodRouteMatcher('DELETE')
 
-export const all = (path: string, component: RouteComponent) => methods
+export const all = (path: string, component: RouteComponent) => supportedMethods
   .map(method => createRouteMatcher(method, path, component))
 
 export function makeHandler (
   routes: RouteMatcher[],
-  options: HandlerOptions
+  options: HandlerOptions = {}
 ) {
   routes = routes.flat(Infinity)
 
@@ -71,7 +83,7 @@ export function makeHandler (
   }, options)
 
   const responseResolver = async (
-    response: ServerResponse,
+    response: ContextResponse,
     innerResolver?: () => Promise<any>
   ) => {
     let nextResponse: RouteComponentResponse
@@ -99,6 +111,9 @@ export function makeHandler (
       setError(null)
     }
 
+    // Clear context
+    setContext(null)
+
     Object.assign(
       currentResponse,
       typeof nextResponse === 'string' || Buffer.isBuffer(nextResponse)
@@ -106,17 +121,14 @@ export function makeHandler (
         : nextResponse
     )
 
-    for (const header in currentResponse.headers) {
-      response.setHeader(header, currentResponse.headers[header])
-    }
-
-    response.statusCode = currentResponse.status
-    response.end(currentResponse.body)
+    response
+      .writeHead(currentResponse.status, currentResponse.headers)
+      .end(currentResponse.body)
   }
 
   return async function incoherenceHandler (
-    request: IncomingMessage,
-    response: ServerResponse
+    request: ContextRequest,
+    response: ContextResponse
   ) {
     const routeMatchers = routesMap.get(request.method.toUpperCase() as RouteMethod)
 
@@ -124,11 +136,6 @@ export function makeHandler (
       throw new Error(`Unsupported HTTP method: ${request.method}`)
     }
 
-    if (!routeMatchers.length) {
-      return responseResolver(response)
-    }
-
-    const requestURL = new URL(request.url)
     const prevContext = getContext()
 
     setContext({
@@ -137,7 +144,13 @@ export function makeHandler (
       locals: prevContext ? prevContext.locals : {}
     })
 
-    responseResolver(response, async () => {
+    if (!routeMatchers.length) {
+      return responseResolver(response)
+    }
+
+    const requestURL = new URL(request.url)
+
+    responseResolver(response, () => {
       for (const routeMatcher of routeMatchers) {
         if (routeMatcher.match(requestURL.pathname)) {
           return routeMatcher.invokeComponent()
@@ -148,24 +161,14 @@ export function makeHandler (
 }
 
 function getRoutesMap (routes: RouteMatcher[]) {
-  const map = getMapFromMethods(methods)
-
-  for (const route of routes) {
-    map
-      .get(route.method)
-      .push(route)
-  }
-
-  return map
-}
-
-function getMapFromMethods (
-  methods: RouteMethod[]
-) {
   const map = new Map<RouteMethod, RouteMatcher[]>()
 
-  for (const method of methods) {
+  for (const method of supportedMethods) {
     map.set(method, [])
+  }
+
+  for (const route of routes) {
+    map.get(route.method).push(route)
   }
 
   return map

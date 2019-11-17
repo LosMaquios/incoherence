@@ -6,7 +6,10 @@
     "rootDir": ".",
     "outDir": "dist",
     "sourceMap": false,
-    "types": ["node"],
+    "types": [
+      "node",
+      "jest"
+    ],
     "paths": {
       "@incoherence/core": ["core/src"],
       "@incoherence/hooks": ["hooks/src"]

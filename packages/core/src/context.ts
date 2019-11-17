@@ -1,8 +1,12 @@
 import { IncomingMessage, ServerResponse } from 'http'
+import { Http2ServerRequest, Http2ServerResponse } from 'http2'
+
+export type ContextRequest = IncomingMessage | Http2ServerRequest
+export type ContextResponse = ServerResponse | Http2ServerResponse
 
 export interface RouteComponentContext {
-  request: IncomingMessage
-  response: ServerResponse
+  request: ContextRequest
+  response: ContextResponse
   locals: { [key: string]: any }
 }
 
