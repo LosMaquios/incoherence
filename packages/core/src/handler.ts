@@ -118,7 +118,7 @@ export function makeHandler (
       locals: prevContext ? prevContext.locals : {}
     })
 
-    responseResolver(response, () => {
+    responseResolver(response, async () => {
       for (const routeMatcher of routeMatchers) {
         if (routeMatcher.match(requestURL.pathname)) {
           return routeMatcher.invokeComponent()
