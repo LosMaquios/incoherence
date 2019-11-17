@@ -51,6 +51,50 @@ export function makeHandler (
     onError: onErrorDefaultHandler
   }, options)
 
+  const responseResolver = async (
+    response: ServerResponse,
+    innerResolver?: () => Promise<any>
+  ) => {
+    let nextResponse: RouteComponentResponse
+
+    const currentResponse: RouteComponentResponseObject = {
+      headers: {},
+      status: 200,
+      body: ''
+    }
+
+    try {
+      if (innerResolver) {
+        nextResponse = await innerResolver()
+      }
+
+      if (!nextResponse) {
+        nextResponse = await options.onUnknown()
+      }
+    } catch (error) {
+      setError(error)
+
+      // TODO: How to handle an error here?
+      nextResponse = await options.onError()
+
+      setError(null)
+    }
+
+    Object.assign(
+      currentResponse,
+      typeof nextResponse === 'string' || Buffer.isBuffer(nextResponse)
+        ? { body: nextResponse }
+        : nextResponse
+    )
+
+    for (const header in currentResponse.headers) {
+      response.setHeader(header, currentResponse.headers[header])
+    }
+
+    response.statusCode = currentResponse.status
+    response.end(currentResponse.body)
+  }
+
   return async function incoherenceHandler (
     request: IncomingMessage,
     response: ServerResponse
@@ -61,26 +105,12 @@ export function makeHandler (
       throw new Error(`Unsupported HTTP method: ${request.method}`)
     }
 
+    if (!routeMatchers.length) {
+      return responseResolver(response)
+    }
+
     const requestURL = new URL(request.url)
     const prevContext = getContext()
-
-    const currentResponse: RouteComponentResponseObject = {
-      headers: {},
-      status: 200,
-      body: ''
-    }
-
-    const mergeResponse = (nextResponse: RouteComponentResponse) => {
-      let nextResponseObject: RouteComponentResponseObject
-
-      if (typeof nextResponse === 'string' || Buffer.isBuffer(nextResponse)) {
-        nextResponseObject = { body: nextResponseObject }
-      } else { // Assume object type
-        nextResponseObject = nextResponse
-      }
-
-      Object.assign(currentResponse, nextResponseObject)
-    }
 
     setContext({
       request,
@@ -88,31 +118,13 @@ export function makeHandler (
       locals: prevContext ? prevContext.locals : {}
     })
 
-    try {
+    responseResolver(response, () => {
       for (const routeMatcher of routeMatchers) {
         if (routeMatcher.match(requestURL.pathname)) {
-          return mergeResponse(
-            await routeMatcher.invokeComponent()
-          )
+          return routeMatcher.invokeComponent()
         }
       }
-
-      mergeResponse(await options.onUnknown())
-    } catch (error) {
-      setError(error)
-
-      // TODO: How to handle an error here?
-      mergeResponse(await options.onError())
-
-      setError(null)
-    }
-
-    for (const header in currentResponse.headers) {
-      response.setHeader(header, currentResponse.headers[header])
-    }
-
-    response.statusCode = currentResponse.status
-    response.end(currentResponse.body)
+    })
   }
 }
 
