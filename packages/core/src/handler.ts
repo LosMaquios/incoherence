@@ -44,6 +44,11 @@ export interface HandlerOptions {
   onError?: RouteComponent
 }
 
+export type IncoherenceHandler = (
+  request: ContextRequest,
+  response: ContextResponse
+) => Promise<void>
+
 const wrapMethodRouteMatcher = (method: RouteMethod) =>
   (path: string, component: RouteComponent) => createRouteMatcher(method, path, component)
 
@@ -72,7 +77,7 @@ export const all = (path: string, component: RouteComponent) => supportedMethods
 export function makeHandler (
   routes: RouteMatcher[],
   options: HandlerOptions = {}
-) {
+): IncoherenceHandler {
   routes = routes.flat(Infinity)
 
   const routesMap = getRoutesMap(routes)
@@ -126,10 +131,7 @@ export function makeHandler (
       .end(currentResponse.body)
   }
 
-  return async function incoherenceHandler (
-    request: ContextRequest,
-    response: ContextResponse
-  ) {
+  return async function incoherenceHandler (request, response) {
     const routeMatchers = routesMap.get(request.method.toUpperCase() as RouteMethod)
 
     if (!routeMatchers) {

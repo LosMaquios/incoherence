@@ -4,7 +4,7 @@ import {
   post
 } from '../src/handler'
 import { RouteComponent } from '../src/matcher'
-import { mockRequestAndResponse } from './mockUtils'
+import { execHandler } from './testUtils'
 
 describe('handler', () => {
   const MockGetComponent = jest.fn(async () => {
@@ -22,6 +22,20 @@ describe('handler', () => {
     throw new Error('Failed to get resource')
   }) as RouteComponent
 
+  const MockCustomErrorComponent = jest.fn(async () => {
+    return {
+      status: 500,
+      body: 'Error skipped'
+    }
+  }) as RouteComponent
+
+  const MockUnknownComponent = jest.fn(async () => {
+    return {
+      status: 404,
+      body: `Random resource ID: ${Math.random()}`
+    }
+  }) as RouteComponent
+
   const handler = makeHandler([
     get('/get/path', MockGetComponent),
     post('/post/path', MockPostComponent),
@@ -36,36 +50,58 @@ describe('handler', () => {
      */
   ])
 
+  const handlerWithCustoms = makeHandler([
+    get('/error/resource', MockErrorComponent)
+  ], {
+    onError: MockCustomErrorComponent,
+    onUnknown: MockUnknownComponent
+  })
+
   test('component matching', async () => {
-    const [requestGET, responseGET] = mockRequestAndResponse('GET', '/get/path')
-    await handler(requestGET, responseGET)
+    const responseGET = await execHandler('GET', '/get/path', handler)
 
     expect(responseGET.statusCode).toEqual(200)
     expect(MockGetComponent).toHaveBeenCalledTimes(1)
     // expect(MockGetComponent).toHaveReturnedWith('get called')
 
-    const [requestPOST, responsePOST] = mockRequestAndResponse('POST', '/post/path')
-    await handler(requestPOST, responsePOST)
+    const responsePOST = await execHandler('POST', '/post/path', handler)
 
-    expect(responseGET.statusCode).toEqual(200)
+    expect(responsePOST.statusCode).toEqual(201)
     expect(MockPostComponent).toHaveBeenCalledTimes(1)
     // expect(MockPostComponent).toHaveReturnedWith('post called')
   })
 
   test('default `not found` component', async () => {
-    const [requestUnknown, responseUnknown] = mockRequestAndResponse('DELETE', '/delete/a/resource')
-    await handler(requestUnknown, responseUnknown)
+    const responseUnknown = await execHandler('DELETE', '/delete/a/resource', handler)
 
     expect(responseUnknown.statusCode).toEqual(404)
   })
 
   test('default `error` component', async () => {
-    const [requestError, responseError] = mockRequestAndResponse('GET', '/error/resource')
-    await handler(requestError, responseError)
+    const responseError = await execHandler('GET', '/error/resource', handler)
 
     return new Promise(resolve => {
       setTimeout(() => {
         expect(responseError.statusCode).toEqual(500)
+        resolve()
+      })
+    })
+  })
+
+  test('custom `not found` component', async () => {
+    const responseUnknown = await execHandler('GET', '/unknown/resource', handlerWithCustoms)
+
+    expect(responseUnknown.statusCode).toEqual(404)
+    expect(MockUnknownComponent).toHaveBeenCalledTimes(1)
+  })
+
+  test('custom `error` component', async () => {
+    const responseError = await execHandler('GET', '/error/resource', handlerWithCustoms)
+
+    return new Promise(resolve => {
+      setTimeout(() => {
+        expect(responseError.statusCode).toEqual(500)
+        expect(MockCustomErrorComponent).toHaveBeenCalledTimes(1)
         resolve()
       })
     })
