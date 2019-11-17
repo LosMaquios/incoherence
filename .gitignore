@@ -1,1 +1,4 @@
 node_modules/
+
+# Ignore local history files
+.history/

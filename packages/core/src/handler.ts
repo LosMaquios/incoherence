@@ -1,23 +1,28 @@
 import { ServerResponse, IncomingMessage } from 'http'
 import { URL } from 'url'
 
-import { createRouteMatcher, RouteMatcher } from './matcher'
-import { setContext, getContext } from './context'
+import {
+  createRouteMatcher,
+  RouteMatcher,
+  RouteMethod,
+  RouteComponent,
+  RouteComponentResponseObject,
+  RouteStatusCode,
+  RouteComponentResponse
+} from './matcher'
+import { setContext, getContext, setError } from './context'
 
-export type RouteMethod = 'GET' | 'POST' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE'
+const getSimpleResponse = (status: RouteStatusCode, message: string): RouteComponentResponseObject => ({
+  status,
+  body: `[${status}] ${message}`
+})
 
-// Taken from: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-export type RouteStatusCodes =
-  100 | 101 | 102 | 103 |
-  200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 226 |
-  300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308 |
-  400
+const onUnknownDefaultHandler: RouteComponent = async () => getSimpleResponse(404, 'Not found')
+const onErrorDefaultHandler: RouteComponent = async () => getSimpleResponse(500, 'Internal server error')
 
-export type RouteComponent = () => RouteResponse
-
-export interface RouteResponse {
-  status?: number
-  body?: any
+export interface HandlerOptions {
+  onUnknown: RouteComponent
+  onError: RouteComponent
 }
 
 const wrapMethodRouteMatcher = (method: RouteMethod) =>
@@ -36,11 +41,17 @@ export const options = wrapMethodRouteMatcher('OPTIONS')
 export const del = wrapMethodRouteMatcher('DELETE')
 
 export function makeHandler (
-  routes: RouteMatcher[]
+  routes: RouteMatcher[],
+  options: HandlerOptions
 ) {
   const routesMap = getRoutesMap(routes)
 
-  return function incoherenceHandler (
+  options = Object.assign({
+    onUnknown: onUnknownDefaultHandler,
+    onError: onErrorDefaultHandler
+  }, options)
+
+  return async function incoherenceHandler (
     request: IncomingMessage,
     response: ServerResponse
   ) {
@@ -51,27 +62,61 @@ export function makeHandler (
     }
 
     const requestURL = new URL(request.url)
+    const prevContext = getContext()
 
-    for (const routeMatcher of routeMatchers) {
-      if (routeMatcher.match(requestURL.pathname)) {
-        setContext({
-          url: requestURL,
-          request,
-          response
-        })
-
-        routeMatcher.invokeComponent(getContext())
-        break
-      }
+    const currentResponse: RouteComponentResponseObject = {
+      headers: {},
+      status: 200,
+      body: ''
     }
 
-    // TODO: Fallback to 404 component
+    const mergeResponse = (nextResponse: RouteComponentResponse) => {
+      let nextResponseObject: RouteComponentResponseObject
+
+      if (typeof nextResponse === 'string' || Buffer.isBuffer(nextResponse)) {
+        nextResponseObject = { body: nextResponseObject }
+      } else { // Assume object type
+        nextResponseObject = nextResponse
+      }
+
+      Object.assign(currentResponse, nextResponseObject)
+    }
+
+    setContext({
+      request,
+      response,
+      locals: prevContext ? prevContext.locals : {}
+    })
+
+    try {
+      for (const routeMatcher of routeMatchers) {
+        if (routeMatcher.match(requestURL.pathname)) {
+          return mergeResponse(
+            await routeMatcher.invokeComponent()
+          )
+        }
+      }
+
+      mergeResponse(await options.onUnknown())
+    } catch (error) {
+      setError(error)
+
+      // TODO: How to handle an error here?
+      mergeResponse(await options.onError())
+
+      setError(null)
+    }
+
+    for (const header in currentResponse.headers) {
+      response.setHeader(header, currentResponse.headers[header])
+    }
+
+    response.statusCode = currentResponse.status
+    response.end(currentResponse.body)
   }
 }
 
-function getRoutesMap (
-  routes: RouteMatcher[]
-) {
+function getRoutesMap (routes: RouteMatcher[]) {
   const map = getMapFromMethods([
     'GET',
     'POST',

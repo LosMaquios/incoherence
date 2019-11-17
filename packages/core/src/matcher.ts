@@ -1,7 +1,25 @@
 import escapeStringRegexp = require('escape-string-regexp')
 
-import { RouteComponent, RouteMethod } from './handler'
-import { RouteComponentContext, setContext } from './context'
+import { setContext } from './context'
+
+export type RouteMethod = 'GET' | 'POST' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE'
+
+// Taken from: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+export type RouteStatusCode =
+  100 | 101 | 102 | 103 |
+  200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 226 |
+  300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308 |
+  400 | 404 | 500
+
+export type RouteComponentResponse = RouteComponentResponseObject | string
+
+export interface RouteComponentResponseObject {
+  headers?: { [key: string]: any }
+  status?: RouteStatusCode
+  body?: any
+}
+
+export type RouteComponent = () => Promise<RouteComponentResponse>
 
 /**
  * Match params:
@@ -25,7 +43,7 @@ export interface RouteMatcher {
   method: RouteMethod
   params: Map<string, string>
   match: (path: string) => boolean
-  invokeComponent: (context: RouteComponentContext) => Promise<void>
+  invokeComponent: () => Promise<RouteComponentResponse>
 }
 
 export function createRouteMatcher (
@@ -47,19 +65,16 @@ function getComponentInvoker (
   component: RouteComponent,
   params: Map<string, string>
 ) {
-  return async function componentInvoker (
-    { response }: RouteComponentContext
-  ) {
+  return async function componentInvoker () {
     const componentResponse = await component()
-
-    response.statusCode = componentResponse.status
-    response.end(componentResponse.body)
 
     // Clear context
     setContext(null)
 
     // Clear params
     params.clear()
+
+    return componentResponse
   }
 }
 

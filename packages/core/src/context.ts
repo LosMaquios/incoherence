@@ -1,15 +1,17 @@
 import { IncomingMessage, ServerResponse } from 'http'
 
 export interface RouteComponentContext {
-  url: URL
   request: IncomingMessage
   response: ServerResponse
+  locals: { [key: string]: any }
 }
 
 const context: {
-  current: RouteComponentContext
+  current: RouteComponentContext,
+  error: any
 } = {
-  current: null
+  current: null,
+  error: null
 }
 
 export function setContext (nextContext: RouteComponentContext) {
@@ -18,4 +20,12 @@ export function setContext (nextContext: RouteComponentContext) {
 
 export function getContext () {
   return context.current
+}
+
+export function setError (nextError: any) {
+  context.error = nextError
+}
+
+export function getError () {
+  return context.error
 }
