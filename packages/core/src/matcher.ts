@@ -86,7 +86,7 @@ function getMatchFn (
   path: string,
   params: Map<string, string>
 ) {
-  const regex = new RegExp(escapeStringRegexp(path).replace(PARAM_REGEX, rewriteParams))
+  const regex = new RegExp(`^${escapeStringRegexp(path).replace(PARAM_REGEX, rewriteParams)}$`)
 
   return function matchFn (
     anyPath: string

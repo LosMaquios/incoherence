@@ -1,4 +1,8 @@
+*.log
 node_modules/
 
 # Ignore local history files
 .history/
+
+# Ignore coverage files
+coverage/

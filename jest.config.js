@@ -6,8 +6,11 @@ module.exports = {
     'lcov',
     'text'
   ],
+  collectCoverage: true,
   collectCoverageFrom: [
-    'packages/*/src/**/*.ts'
+    'packages/*/src/**/*.ts',
+    // Ignore public API
+    '!packages/*/src/index.ts'
   ],
   watchPathIgnorePatterns: [
     '/node_modules/'

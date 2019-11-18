@@ -60,13 +60,13 @@ describe('handler', () => {
   test('component matching', async () => {
     const responseGET = await execHandler('GET', '/get/path', handler)
 
-    expect(responseGET.statusCode).toEqual(200)
+    expect(responseGET.statusCode).toBe(200)
     expect(MockGetComponent).toHaveBeenCalledTimes(1)
     // expect(MockGetComponent).toHaveReturnedWith('get called')
 
     const responsePOST = await execHandler('POST', '/post/path', handler)
 
-    expect(responsePOST.statusCode).toEqual(201)
+    expect(responsePOST.statusCode).toBe(201)
     expect(MockPostComponent).toHaveBeenCalledTimes(1)
     // expect(MockPostComponent).toHaveReturnedWith('post called')
   })
@@ -74,7 +74,7 @@ describe('handler', () => {
   test('default `not found` component', async () => {
     const responseUnknown = await execHandler('DELETE', '/delete/a/resource', handler)
 
-    expect(responseUnknown.statusCode).toEqual(404)
+    expect(responseUnknown.statusCode).toBe(404)
   })
 
   test('default `error` component', async () => {
@@ -82,7 +82,7 @@ describe('handler', () => {
 
     return new Promise(resolve => {
       setTimeout(() => {
-        expect(responseError.statusCode).toEqual(500)
+        expect(responseError.statusCode).toBe(500)
         resolve()
       })
     })
@@ -91,7 +91,7 @@ describe('handler', () => {
   test('custom `not found` component', async () => {
     const responseUnknown = await execHandler('GET', '/unknown/resource', handlerWithCustoms)
 
-    expect(responseUnknown.statusCode).toEqual(404)
+    expect(responseUnknown.statusCode).toBe(404)
     expect(MockUnknownComponent).toHaveBeenCalledTimes(1)
   })
 
@@ -100,7 +100,7 @@ describe('handler', () => {
 
     return new Promise(resolve => {
       setTimeout(() => {
-        expect(responseError.statusCode).toEqual(500)
+        expect(responseError.statusCode).toBe(500)
         expect(MockCustomErrorComponent).toHaveBeenCalledTimes(1)
         resolve()
       })
