@@ -1,4 +1,4 @@
-import escapeStringRegexp = require('escape-string-regexp')
+import escapeStringRegexp from 'escape-string-regexp'
 
 export type RouteMethod = 'GET' | 'POST' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE'
 

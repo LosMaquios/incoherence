@@ -8,6 +8,6 @@
   "author": "Camilo Rodríguez <aeromotiondesign@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@incoherence/core": "*"
+    "@incoherence/core": "0.1.0"
   }
 }

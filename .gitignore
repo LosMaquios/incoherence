@@ -6,3 +6,6 @@ node_modules/
 
 # Ignore coverage files
 coverage/
+
+# Ignore distribution files
+dist/

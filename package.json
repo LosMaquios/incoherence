@@ -4,13 +4,16 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "rollup -c"
   },
   "devDependencies": {
     "@types/jest": "^24.0.23",
     "@types/node": "^12.12.7",
     "jest": "^24.9.0",
     "lerna": "^3.18.4",
+    "rollup": "^1.27.2",
+    "rollup-plugin-typescript2": "^0.25.2",
     "ts-jest": "^24.1.0",
     "typescript": "^3.7.2"
   }
